@@ -1,0 +1,4 @@
+export class InputError extends Error { constructor(message:string,public status=400){super(message);} }
+export async function body(req:Request):Promise<Record<string,unknown>> { try { const b=await req.json(); if(!b||typeof b!=='object'||Array.isArray(b)) throw new Error(); return b; } catch { throw new InputError('Dữ liệu JSON không hợp lệ.'); } }
+export function field(b:Record<string,unknown>, key:string,max:number,min=1) { const v=b[key]; if(typeof v!=='string'||v.trim().length<min||v.trim().length>max) throw new InputError(`${key}: cần từ ${min} đến ${max} ký tự.`); return v.trim(); }
+export async function handle(fn:()=>unknown|Promise<unknown>) { try { return Response.json(await fn()); } catch(e) { if(e instanceof InputError) return Response.json({error:e.message},{status:e.status}); console.error(e); return Response.json({error:'Không thể xử lý lúc này. Vui lòng thử lại.'},{status:500}); } }
