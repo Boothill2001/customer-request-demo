@@ -6,6 +6,10 @@ Demo dành cho doanh nghiệp muốn xem cách tự động hóa một phần c�
 
 > Demo local. **AI mô phỏng bằng quy tắc**, chưa gửi email, chưa kết nối CRM và chưa có đăng nhập. Ảnh bên dưới được chụp từ ứng dụng chạy thật với dữ liệu mẫu.
 
+**Không cần xem video:** ảnh và các bước dưới đây minh họa trọn luồng sản phẩm. Bộ 6 ảnh được chụp lại ngày **04/11/2026** từ ứng dụng chạy local; không dùng mockup hay dữ liệu khách hàng thật.
+
+**Vai trò kỹ thuật:** thiết kế API/state transition, validation, SQLite persistence, bước nhân viên duyệt, kiểm thử và xử lý failure paths. [Xem bản đồ code và kịch bản demo 3 phút](docs/REVIEW-GUIDE.md).
+
 ![Giới thiệu quy trình](docs/screenshots/overview.png)
 
 ## Bạn có thể thử những gì?
@@ -31,6 +35,12 @@ Form gồm tên, email và nội dung. Sau khi gửi, khách nhận mã yêu c�
 Bấm chỉ số để lọc trạng thái. Chọn yêu cầu và làm theo ô **Bước tiếp theo**. Phân tích luôn có nhãn **AI mô phỏng**.
 
 ![Bàn xử lý và phản hồi đề xuất](docs/screenshots/workspace.png)
+
+### Kiểm soát lỗi: sửa nội dung thì phải duyệt lại
+
+Sau khi phản hồi đã được duyệt, nhân viên sửa và lưu bản nháp mới: trạng thái duyệt bị hủy. Ticket đang xử lý không thể hoàn thành cho tới khi duyệt lại. Quy tắc được kiểm tra cả ở API, không chỉ ở nút giao diện.
+
+![Bản sửa chưa duyệt — không thể hoàn thành](docs/screenshots/reapproval-required.png)
 
 ### Duyệt và ghi nhận hoàn thành
 
@@ -91,7 +101,9 @@ npm run typecheck
 npm run build
 ```
 
-Đã kiểm tra API, bước duyệt, lưu qua restart, lỗi và thử lại; luồng trình duyệt và màn hình 320/375/414/768/1280 px. Chưa kiểm thử tải hoặc chất lượng AI thật.
+**Kiểm tra lại ngày 04/11/2026:** 2 unit tests pass; typecheck và production build pass; API regression kiểm tra input validation, 4 loại yêu cầu, approval guards, history và seed preservation. Luồng trình duyệt tạo → phân tích → duyệt → sửa/lưu → bị chặn hoàn thành → duyệt lại → hoàn thành → refresh pass. Ba màn hình ở 320/375/414/768/1280 px không tràn ngang. Chưa kiểm thử tải hoặc chất lượng AI thật; lượt này xác nhận persistence qua refresh, không chạy bài kiểm tra process-restart riêng.
+
+Next.js được cập nhật lên **16.4.5**; `npm audit` không còn advisory được báo tại lần kiểm tra trên. Đây không phải chứng nhận an toàn để public hosting.
 
 `node scripts/verify.mjs` chạy với server đang bật và tạo ticket kiểm thử: dùng DB riêng. Script browser `.cjs` cần Playwright (`PLAYWRIGHT_PATH`) và trình duyệt (`BROWSER_EXE`); `BASE_URL` chọn server. Script chụp ảnh nạp lại mẫu nên chỉ dùng DB dành cho demo.
 
