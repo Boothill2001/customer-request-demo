@@ -1,99 +1,50 @@
-# Web xử lý yêu cầu khách hàng
+# Customer Request Desk
 
-**Tiếp nhận → chuẩn bị phản hồi → nhân viên duyệt → theo dõi hoàn thành.**
+**A support agent approves a reply, then edits it. Can the ticket still be closed?** This local demo clears approval on edit. Trying to complete the ticket now returns **HTTP 409**. Once the revised reply is approved, the ticket closes and the history remains available after refresh.
 
-Demo dành cho doanh nghiệp muốn xem cách tự động hóa một phần công việc chăm sóc khách hàng trước khi trao đổi về triển khai. Khách gửi nội dung; nhân viên xem gợi ý và quyết định phản hồi cuối cùng.
+| Input | What the agent receives | What the system records |
+| --- | --- | --- |
+| A customer submits a pricing inquiry, login issue, or order complaint | A category, checklist, and editable reply draft from a rule-based simulator | A ticket ID, the approved reply, and a timeline of changes in SQLite |
 
-> Demo local. **AI mô phỏng bằng quy tắc**, chưa gửi email, chưa kết nối CRM và chưa có đăng nhập. Ảnh bên dưới được chụp từ ứng dụng chạy thật với dữ liệu mẫu.
+The demo focuses on the approval workflow and its failure paths. Replies stay inside the app. The suggested reply comes from deterministic rules. The data is fictional.
 
-**Không cần xem video:** ảnh và các bước dưới đây minh họa trọn luồng sản phẩm. Bộ 6 ảnh được chụp lại ngày **04/11/2026** từ ứng dụng chạy local; không dùng mockup hay dữ liệu khách hàng thật.
+## Follow one ticket
 
-**Vai trò kỹ thuật:** thiết kế API/state transition, validation, SQLite persistence, bước nhân viên duyệt, kiểm thử và xử lý failure paths. [Xem bản đồ code và kịch bản demo 3 phút](docs/REVIEW-GUIDE.md).
+```mermaid
+flowchart LR
+    A[Customer submits a request] --> B[Rules propose checklist and reply]
+    B --> C[Agent edits and approves]
+    C --> D{Reply edited again?}
+    D -->|Yes| E[Completion blocked with HTTP 409]
+    E --> C
+    D -->|No| F[Complete and record the timeline]
+```
 
-![Giới thiệu quy trình](docs/screenshots/overview.png)
+1. Submit a request and keep the ticket ID.
+2. In the staff workspace, analyze the ticket, edit the draft, approve it, and start processing.
+3. Save another edit and try to complete the ticket. The API rejects completion until you approve the new draft.
+4. Approve the revision and complete the ticket. Refresh to see the persisted reply and timeline.
 
-## Bạn có thể thử những gì?
+[See the running Vietnamese interface](docs/screenshots/workspace.png) · [See the blocked completion](docs/screenshots/reapproval-required.png) · [See the completed ticket](docs/screenshots/approved-request.png)
 
-| Tình huống | Demo hỗ trợ | Nhân viên quyết định |
-|---|---|---|
-| Hỏi giá | Phân loại, checklist, dự thảo phản hồi | Kiểm tra phạm vi trước khi báo giá |
-| Không đăng nhập được | Gợi ý lấy thông báo lỗi và bước tái hiện | Xác nhận lỗi và phương án hỗ trợ |
-| Khiếu nại đơn hàng | Đánh dấu ưu tiên cao, kiểm tra mã đơn | Xác minh sự việc và duyệt nội dung |
+## Run locally
 
-Mỗi yêu cầu có mã riêng, trạng thái và lịch sử. Tìm theo mã, tên, email hoặc nội dung. Sửa phản hồi sau khi duyệt sẽ yêu cầu duyệt lại.
-
-## Xem qua màn hình thật
-
-### Khách gửi yêu cầu
-
-Form gồm tên, email và nội dung. Sau khi gửi, khách nhận mã yêu cầu.
-
-![Form gửi yêu cầu](docs/screenshots/customer-form.png)
-
-### Nhân viên kiểm tra và chuẩn bị phản hồi
-
-Bấm chỉ số để lọc trạng thái. Chọn yêu cầu và làm theo ô **Bước tiếp theo**. Phân tích luôn có nhãn **AI mô phỏng**.
-
-![Bàn xử lý và phản hồi đề xuất](docs/screenshots/workspace.png)
-
-### Kiểm soát lỗi: sửa nội dung thì phải duyệt lại
-
-Sau khi phản hồi đã được duyệt, nhân viên sửa và lưu bản nháp mới: trạng thái duyệt bị hủy. Ticket đang xử lý không thể hoàn thành cho tới khi duyệt lại. Quy tắc được kiểm tra cả ở API, không chỉ ở nút giao diện.
-
-![Bản sửa chưa duyệt — không thể hoàn thành](docs/screenshots/reapproval-required.png)
-
-### Duyệt và ghi nhận hoàn thành
-
-Nhân viên chỉnh nội dung rồi duyệt. Phản hồi chỉ lưu nội bộ; lịch sử ghi lại các bước xử lý.
-
-![Hoàn thành và lịch sử](docs/screenshots/approved-request.png)
-
-<details>
-<summary>Xem giao diện điện thoại</summary>
-
-<img src="docs/screenshots/mobile.png" width="375" alt="Giao diện trên điện thoại" />
-
-</details>
-
-## Chạy và tự thử
-
-**Windows:** cài Node.js 24 trở lên → **Code → Download ZIP** → giải nén → mở `start.bat` → mở [http://127.0.0.1:3000](http://127.0.0.1:3000).
-
-Lần đầu cần mạng để cài thư viện. Dừng bằng Ctrl+C. Nếu cổng 3000 đang dùng, dừng server cũ hoặc chạy `npm run dev -- --port 3100`.
+On Windows, install Node.js 24 or newer, extract the repository, and double-click [`start.bat`](start.bat). Open [the local app](http://127.0.0.1:3000). Load sample data from the staff workspace or submit a fictional request of your own. Loading samples again replaces prior samples and preserves manually submitted tickets.
 
 ```bash
-git clone https://github.com/Boothill2001/customer-request-demo.git
-cd customer-request-demo
 npm ci
 npm run dev
 ```
 
-1. Mở **Quản lý → Nạp dữ liệu mẫu** và xác nhận.
-2. Chọn **Lan Anh → Phân tích**, xem checklist và sửa phản hồi.
-3. **Duyệt phản hồi → Bắt đầu xử lý → Hoàn thành**.
-4. Thử **Minh Đức**, **Thu Hà**, hoặc vào **Gửi yêu cầu** để nhập nội dung riêng.
-5. Đóng và mở server: dữ liệu và lịch sử vẫn còn.
+## Where the workflow is enforced
 
-Nạp lại mẫu chỉ thay yêu cầu có nhãn Mẫu, giữ yêu cầu tự nhập. Dùng dữ liệu thử nghiệm, không nhập thông tin nhạy cảm.
-
-## Tùy chỉnh theo doanh nghiệp
-
-Có thể điều chỉnh loại yêu cầu, ưu tiên, checklist, phản hồi và bước duyệt theo quy trình cụ thể. Email/CRM, tài khoản, phân quyền và AI thật cần triển khai và kiểm chứng riêng. Repo chưa chứng minh hiệu quả trên dữ liệu khách thật hoặc mức tiết kiệm thời gian.
-
-## Dành cho người triển khai
-
-**Stack:** Next.js App Router, TypeScript, SQLite tích hợp Node.js 24. `lib/ai.ts` định nghĩa `AIProvider`; thay provider ở server để gắn API thật. Không đặt key trong browser. Bộ mẫu dùng từ khóa; checklist có thể chứa thông tin khách đã cung cấp, nhân viên cần kiểm tra.
-
-| API | Chức năng |
-|---|---|
-| `GET /api/tickets` | Danh sách |
-| `POST /api/tickets` | Tạo từ `{name,email,content}` |
-| `GET /api/tickets/:id` | Đọc yêu cầu |
-| `PATCH /api/tickets/:id` | `{action:save\|approve\|advance,response?}` |
-| `POST /api/tickets/:id/analyze` | Phân tích, giữ phản hồi đã chỉnh |
-| `POST /api/seed` | `{confirm:true}` nạp mẫu |
-
-Lỗi trả `{error}` với HTTP 400/404/409/500. SQLite ở `data/tickets.sqlite`; dừng server trước khi sao lưu. Biến `TICKET_DB` chọn DB riêng. Chỉnh sửa đồng thời hiện là last-write-wins.
+| Component | Responsibility |
+| --- | --- |
+| [Ticket API](app/api/tickets/route.ts) | Validates new requests and returns a ticket ID |
+| [Transition API](app/api/tickets/%5Bid%5D/route.ts) | Clears approval on edit, checks approval before completion, and locks completed tickets |
+| [Analysis provider](lib/ai.ts) | Generates deterministic suggestions behind the server-side provider interface |
+| [SQLite store](lib/store.ts) | Persists ticket content, status, and history |
+| [API verification](scripts/verify.mjs) | Exercises bad inputs, approval guards, history, and sample data preservation |
 
 ```bash
 npm test
@@ -101,12 +52,6 @@ npm run typecheck
 npm run build
 ```
 
-**Kiểm tra lại ngày 04/11/2026:** 2 unit tests pass; typecheck và production build pass; API regression kiểm tra input validation, 4 loại yêu cầu, approval guards, history và seed preservation. Luồng trình duyệt tạo → phân tích → duyệt → sửa/lưu → bị chặn hoàn thành → duyệt lại → hoàn thành → refresh pass. Ba màn hình ở 320/375/414/768/1280 px không tràn ngang. Chưa kiểm thử tải hoặc chất lượng AI thật; lượt này xác nhận persistence qua refresh, không chạy bài kiểm tra process-restart riêng.
+The browser checks cover submission, approval, completion, and layout at five viewport widths. The API verification script creates tickets. Point the server to a disposable database with `TICKET_DB` and set `BASE_URL` for the script. [Detailed reviewer guide in Vietnamese](docs/REVIEW-GUIDE.md)
 
-Next.js được cập nhật lên **16.4.5**; `npm audit` không còn advisory được báo tại lần kiểm tra trên. Đây không phải chứng nhận an toàn để public hosting.
-
-`node scripts/verify.mjs` chạy với server đang bật và tạo ticket kiểm thử: dùng DB riêng. Script browser `.cjs` cần Playwright (`PLAYWRIGHT_PATH`) và trình duyệt (`BROWSER_EXE`); `BASE_URL` chọn server. Script chụp ảnh nạp lại mẫu nên chỉ dùng DB dành cho demo.
-
-### Trước khi chạy online
-
-Server bind 127.0.0.1. Cần thêm xác thực, phân quyền, rate limit, kiểm soát dữ liệu theo doanh nghiệp, giám sát và sao lưu trước khi public hosting.
+The app binds to loopback. It has no authentication, email delivery, CRM connection, or production deployment. Concurrent edits currently use last-write-wins.
